@@ -101,6 +101,86 @@
             }
        });
 
+       
+            $('#searchQuery').keyup(function(){
+                var searchQuery = $(this).val(); 
+                if (searchQuery.length > 2){
+                    $.ajax({
+                        type: 'GET',
+                        url: 'search.php', 
+                        data: { search_query: searchQuery }, 
+                        success: function(response){
+                            $('#searchResults').html(response); 
+                        }
+                    });
+                }
+            });
+
+            $('#searchResults').on('click', 'a', function(e){
+                e.preventDefault(); 
+                var selectedQuestion = $(this).text(); 
+                $.ajax({
+                    type: 'POST',
+                    url: 'get_answer.php', 
+                    data: { question: selectedQuestion }, 
+                    success: function(response){
+                        addMessage(selectedQuestion, 'sent'); 
+                        addMessage(response, 'received'); 
+
+                        $.ajax({
+                             type: 'POST',
+                             url: 'save_conversation.php', 
+                             data: {
+                                  question: selectedQuestion,
+                                  response: response
+                            },
+                            success: function(data) {
+                                 console.log('Conversation and messages saved', data);
+                            },
+                            error: function(error) {
+                                console.error('Failed to save conversation', error);
+                            }
+                        });
+                    }
+                });
+
+            });
+
+            $('#searchForm').on('submit', function(e){
+                e.preventDefault(); // Prevent form from refreshing the page
+                var searchQuery = $('#searchQuery').val(); // Get the user's query
+                if (searchQuery.length > 1){
+                    $.ajax({
+                        type: 'POST',
+                        url: 'get_answer.php', 
+                        data: { question: searchQuery },
+                        success: function(response){
+                            addMessage(searchQuery, 'sent');
+                            addMessage(response, 'received');
+
+                            $.ajax({
+                             type: 'POST',
+                             url: 'save_conversation.php', 
+                             data: {
+                                  question: searchQuery,
+                                  response: response
+                            },
+                            success: function(data) {
+                                 console.log('Conversation and messages saved', data);
+                            },
+                            error: function(error) {
+                                console.error('Failed to save conversation', error);
+                            }
+                        });
+                        },
+                        error: function(){
+                            addMessage('An error occurred. Please try again later.', 'received');
+                        }
+                    });
+                }
+                
+            });
+
 
 
        $(document).ready(function() {
@@ -166,6 +246,27 @@
                 $('#searchQuery').val(''); // Clear the input field after message is sent
             }
         });
+        $(document).ready(function() {
+            $('#startNewChat').click(function() {
+              $.ajax({
+                   type: 'POST',
+                   url: 'create_conversation.php', // This PHP file will handle the creation of a new conversation
+                   data: { title: 'New Chat' }, // Assuming a default title for new chats
+                   success: function(data) {
+                        var conversationId = data.conversationId; // Expecting conversation ID returned from the server
+                        $('#conversation').html(''); // Clear the current chat area
+                        // Add the new conversation to the sidebar
+                        $('.nav.flex-column').prepend(`<li class="nav-item"><a class="nav-link" href="#" data-conversation-id="${conversationId}">New Chat</a></li>`);
+                        $('.nav-link').removeClass('active'); // Remove active class from all links
+                        $('.nav.flex-column li:first-child .nav-link').addClass('active'); // Add active class to the new link
+                    },
+                    error: function() {
+                       alert('Error creating new chat');
+                    }
+             });
+           });
+       });
+
 
 
 
@@ -187,6 +288,22 @@
                     alert('Failed to fetch messages.');
                 });
             });
+
+            $(document).on('click', '.nav-link', function(e) {
+          e.preventDefault();
+         var conversationId = $(this).data('conversation-id');
+        $.ajax({
+           type: 'POST',
+           url: 'fetch_messages.php',
+           data: { conversation_id: conversationId },
+           success: function(response) {
+              $('#conversation').html(response); // Assuming #conversation is your chat display area
+           },
+           error: function() {
+              alert('Failed to fetch messages.');
+          }
+       });
+});
 
 
 
