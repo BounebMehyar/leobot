@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leoni ChatBot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+
+<body >
+    
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-4 col-lg-3 bg-light border-right">
+
+                <div class="new-chat-container p-3">
+                    <button id="startNewChat" class="btn btn-primary w-100 mb-2">New Chat</button>
+                </div>
+                <ul class="nav flex-column" id="chatList">
+                    <?php foreach ($conversations as $conversation) : ?>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-conversation-id="<?php echo $conversation['conversation_id']; ?>">
+                            <?php echo htmlspecialchars($conversation['title']); ?>
+                        </a>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+            <div class="col-md-8 col-lg-9">
+                <div class="text-center mb-4">
+                    <img src="image/leobot.png" alt="leobot" width="200" height="80">
+                </div>
+                <div id="conversation" class="border rounded p-3 mb-4" style="height: 400px; overflow-y: scroll;"></div>
+                <div id="searchContainer" class="mb-4">
+                    <form id="searchForm" class="input-group">
+                        <input type="text" id="searchQuery" class="form-control" placeholder="Type your query">
+                        <button type="submit" class="btn btn-primary">Send</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script defer>
+       $(document).ready(function() {
+    // Check if user exists when the page loads
+       var userId = '1';
+       console.log("Hello world!");
+
+       $.ajax({
+           type: 'GET',
+           url: 'check_user.php',
+           data: { userid: userId },
+           success: function(response) {
+               var data = JSON.parse(response);
+               if (!data.exists) {
+                   var username = mehyarbouneb;
+                   var cin =12345678;
+
+                   if (username && cin) {
+                       $.ajax({
+                           type: 'POST',
+                           url: 'add_user.php',
+                           data: { userid: userId, username: username, cin: cin },
+                           success: function(response) {
+                              alert('User created successfully!');
+                           },
+                           error: function() {
+                              alert('Error creating user.');
+                           }
+                       });
+                    }
+                }else{
+                    $.ajax({
+                    type: 'GET',
+                    url: 'display_sidebar.php',
+                    data: { userid: userId },
+                    success: function(response) {
+                       
+                        var data = JSON.parse(response);
+                        
+                        var sidebar = $('#sidebar');
+                        sidebar.empty(); 
+                        
+                        data.forEach(function(conversation) {
+                            var listItem = $('<li>').text(conversation.title);
+                            sidebar.append(listItem);
+                        });
+                    },
+                    error: function() {
+                        alert('Error retrieving conversation titles.');
+                    }
+                });
+         
+                }  
+            },
+            error: function() {
+               alert('Failed to check user existence.');
+            }
+       });
+
+
+
+       $(document).ready(function() {
+            let isNewConversation = false; // Flag to track if it's a new conversation
+        
+            $('#startNewChat').click(function() {
+                isNewConversation = true; // Reset flag when new chat is started
+                $('#conversation').empty(); // Optionally clear the conversation display
+                $('#searchQuery').val(''); // Clear the input field
+            });
+        
+            $('#searchForm').on('submit', function(e) {
+                e.preventDefault();
+                var query = $('#searchQuery').val();
+                if (query) {
+                    if (isNewConversation) {
+                        // Handle the first question of a new conversation
+                        createNewConversation(query);
+                        isNewConversation = false; // Reset the flag after handling the first query
+                    } else {
+                        // Continue with the existing conversation
+                        sendMessage(query);
+                    }
+                }
+            });
+        
+            function createNewConversation(firstQuestion) {
+                $.ajax({
+                    type: 'POST',
+                    url: 'create_conversation.php',
+                    data: {
+                        firstQuestion: firstQuestion
+                    },
+                    success: function(response) {
+                        console.log('New conversation started:', response);
+                        addMessage(firstQuestion, 'sent');
+                        // Additional code to handle the response
+                    },
+                    error: function() {
+                        alert('Error starting new conversation.');
+                    }
+                });
+            }
+        
+            function sendMessage(message) {
+                $.ajax({
+                    type: 'POST',
+                    url: 'send_message.php', // Assumes this is the endpoint to handle ongoing conversation
+                    data: { message: message },
+                    success: function(response) {
+                        addMessage(message, 'sent');
+                        // Additional code to handle the response
+                    },
+                    error: function() {
+                        alert('Error sending message.');
+                    }
+                });
+            }
+        
+            function addMessage(message, type) {
+                $('#conversation').append('<div class="message ' + type + '">' + message + '</div>');
+                $('#conversation').scrollTop($('#conversation')[0].scrollHeight);
+                $('#searchQuery').val(''); // Clear the input field after message is sent
+            }
+        });
+
+
+
+
+
+
+
+
+
+
+        $(function() {
+            
+            $('#chatList').on('click', 'a', function(e) {
+                e.preventDefault();
+                var conversationId = $(this).data('conversation-id');
+                $.post('fetch_messages.php', { conversation_id: conversationId }, function(messages) {
+                    $('#conversation').html(messages);
+                }).fail(function() {
+                    alert('Failed to fetch messages.');
+                });
+            });
+
+
+
+
+
+
+
+
+
+            $('#searchForm').on('submit', function(e) {
+                e.preventDefault();
+                var query = $('#searchQuery').val();
+                $.post('get_answer.php', { question: query }, function(response) {
+                    $('#conversation').append('<div class="message sent">' + query + '</div><div class="message received">' + response + '</div>');
+                    $('#searchQuery').val(''); // Clear the input field
+                }).fail(function() {
+                    alert('Error sending query.');
+                });
+            });
+        });
+    });
+    </script>
+    
+        
+</body>
+</html>

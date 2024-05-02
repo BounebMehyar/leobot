@@ -1,0 +1,19 @@
+[
+    {
+        "userid": "1",
+        "username": "JohnDoe",
+        "cin": "XYZ123",
+        "conversations": [
+            {
+                "conversationId": "1",
+                "title": "Support Query 1",
+                "filePath": "chats/conv1.json"
+            },
+            {
+                "conversationId": "2",
+                "title": "Support Query 2",
+                "filePath": "chats/conv2.json"
+            }
+        ]
+    }
+]
